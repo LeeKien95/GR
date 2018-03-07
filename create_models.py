@@ -1,23 +1,24 @@
+#svm
 import menpo.io as mio
 import os
 from sklearn import svm
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
+import Models
+from Models import ChangeVector
+import time
+import json
 
 path_to_svm_training_database = '/Programing/GR/Code/CK+/aam-images/**/**/**/*'
-path_to_facs = '/Programing/GR/Code/CK+/FACS/'
-path_to_emotions = '/Programing/GR/Code/CK+/Emotion/'
-path_to_svm_testing_database = "/Programing/GR/Code/CK+/test-aam-images/**/**/**/*"
 
+# class ChangeVector:
+#     def __init__(self, facs = [], landmarkChange = [], emotion = 0):
+#         self.landmarkChange = landmarkChange
+#         self.facs = facs
+#         self.emotion = emotion
 
-class ChangeVector:
-    def __init__(self, facs = [], landmarkChange = [], emotion = 0):
-        self.landmarkChange = landmarkChange
-        self.facs = facs
-        self.emotion = emotion
-
-def process(image, crop_proportion=0.2, max_diagonal=400):
+def process_input_image(image, crop_proportion=0.2, max_diagonal=400):
     if image.n_channels == 3:
         image = image.as_greyscale()
     image = image.crop_to_landmarks_proportion(crop_proportion)
@@ -34,9 +35,10 @@ def pca(changeVector):
 
 
 training_images = mio.import_images(path_to_svm_training_database, verbose=True)
-training_images = training_images.map(process)
+training_images = training_images.map(process_input_image)
 
-
+path_to_facs = '/Programing/GR/Code/CK+/FACS/'
+path_to_emotions = '/Programing/GR/Code/CK+/Emotion/'
 
 #create training data
 count = 0;
@@ -95,11 +97,12 @@ for au in facs:
     clf.fit(x_training, y_label)
     au_models_score.append(clf.score(x_training, y_label))
     models.append(clf)
-
+    
 #create testing data
 svm_testing_data = []
+path_to_svm_testing_database = "/Programing/GR/Code/CK+/test-aam-images/**/**/**/*"
 testing_images = mio.import_images(path_to_svm_testing_database, verbose=True)
-testing_images = testing_images.map(process)
+testing_images = testing_images.map(process_input_image)
 
 count = 0;
 while(count < len(testing_images)):
@@ -125,11 +128,32 @@ while(count < len(testing_images)):
     svm_testing_data.append(ChangeVector(data_facs, landmarkChange, gt_emotion))   
     count = count + 2
 
-# regresssion model
+    
+#evaluate trained model with test data and get score
+#print('#######')
+#print('Sccore: ')
+for au in facs:
+    x_training = []
+    y_label = []
+    #create label array
+    for data in svm_testing_data:
+        if(au in data.facs):
+            y_label.append(1)
+        else:
+            y_label.append(0)
+        #create training data: 1x68 array, result of PCA process
+        vector = []
+        for tmp in data.landmarkChange:
+            vector.append(tmp[0])
+            vector.append(tmp[1])
+        x_training.append(vector)
+    #print(models[facs.index(au)].score(x_training, y_label))
+
+#regresssion model
 wrong_predict = 0
 au_score = []
 for data in svm_testing_data:
-    print('#####')
+    #print('#####')
     local_wrong_predict = 0
     local_accurate_predict = 0
     tmp = []
@@ -150,87 +174,19 @@ for data in svm_testing_data:
         else:
             if(facs[models.index(model)] in data.facs):
                 local_wrong_predict += 1
-    print(predict)
-    print(local_accurate_predict)
+    #print(predict)
+    #print(local_accurate_predict)
     au_score.append(float(local_accurate_predict)/float(len(data.facs)))
-    print("---")
+    #print("---")
     data.facs.sort()
-    for gt_facs in data.facs:
-        print([gt_facs, models[facs.index(gt_facs)].predict([tmp])[0]])
+    #for gt_facs in data.facs:
+        #print([gt_facs, models[facs.index(gt_facs)].predict([tmp])[0]])
     wrong_predict += local_wrong_predict
     
-# print(wrong_predict)
-# print(sum(au_score)/float(len(au_score)))
+#print(wrong_predict)
+#print(sum(au_score)/float(len(au_score)))
 
-#emotion models
-class Emotion:
-    def __init__(self, name, facs_required, criteria):
-        self.name = name
-        self.facs_required = facs_required
-        self.criteria = criteria
-    
-    def criteria(self, facs_input):
-        return True
-    
-    def score(self,facs_input = []):
-        if(self.criteria(facs_input) == True):
-            max = 0
-            for required in self.facs_required:
-                au_count = 0
-                for facs in facs_input:
-                    if facs in required:
-                        au_count += 1
-                if au_count/float(len(required)) >= max:
-                    max = au_count/float(len(required))
-            return max
-        else:
-            return 0
-    
-def angry_criteria(facs_input):
-    if(23 in facs_input):
-        return True
-    return False
-
-def disgus_criteria(facs_input):
-    if(9 in facs_input or 10 in facs_input):
-        return True
-    return False
-
-def fear_criteria(facs_input):
-    if(1 in facs_input and 2 in facs_input and 3 in facs_input):
-        return True
-    return False
-
-def surprise_criteria(facs_input):
-    if(1 in facs_input and 2 in facs_input):
-        return True
-    if(5 in facs_input):
-        return True
-    return False
-
-def sadness_criteria(facs_input):
-    return True
-
-def happy_criteria(facs_input):
-    if(12 in facs_input):
-        return True
-    return False
-
-def contempt_criteria(facs_input):
-    if(14 in facs_input):
-        return True
-    return False
-
-happy = Emotion('happy', [[6,12]], happy_criteria)
-sadness = Emotion('sadness', [[1,4,5], [6,15], [1,4,15]], sadness_criteria)
-surprise = Emotion('surprise', [[1,2,5,26]], surprise_criteria)
-fear = Emotion('fear', [[1,2,4,5,7,20,26]], fear_criteria)
-angry = Emotion('angry', [[4,5,7,23]], angry_criteria)
-disgust = Emotion('disgust', [[9,15,16], [10,15,16]], disgus_criteria)
-contempt = Emotion('contempt', [[12,14]], contempt_criteria)
-
-emotions = [happy, sadness, surprise, fear, angry, disgust, contempt]
-
+#emotion prediction model
 result = []
 for data in svm_testing_data:
     tmp = []
@@ -248,13 +204,22 @@ for data in svm_testing_data:
         emotion_predict.append([emotion.name, emotion.score(facs_predict)])
     result.append([emotion_predict, data.emotion])
 
+#save model
+import pickle
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:  # Overwrites any existing file.
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+        
+save_object(models, '/Programing/GR/Code/Python/models/au_models.pkl')
+save_object(facs, '/Programing/GR/Code/Python/models/facs.pkl')
+
+
+#create log file
 log_path = '/Programing/GR/Code/Python/log/'
-import time
-import json
+
 ts = int(time.time())
-with open(log_path + ts + '.txt', "w+", 'w+') as outfile:
-    json.dump(data, outfile)
-
-
-
-
+output = {'n_train': len(training_images), 'n_test': len(testing_images), 
+    'au_score' : au_models_score, 'facs': facs, 'au_accuracy': sum(au_score)/float(len(au_score)),  }
+    
+with open(log_path + 'system_log' + str(ts) + '.txt', "w+") as outfile:
+    json.dump(output, outfile,sort_keys=True, indent=4, separators=(',', ': '))
