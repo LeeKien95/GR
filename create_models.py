@@ -151,7 +151,7 @@ for au in facs:
 
 #regresssion model
 wrong_predict = 0
-au_score = []
+possitive_au_predict_score = []
 for data in svm_testing_data:
     #print('#####')
     local_wrong_predict = 0
@@ -176,7 +176,7 @@ for data in svm_testing_data:
                 local_wrong_predict += 1
     #print(predict)
     #print(local_accurate_predict)
-    au_score.append(float(local_accurate_predict)/float(len(data.facs)))
+    possitive_au_predict_score.append(float(local_accurate_predict)/float(len(data.facs)))
     #print("---")
     data.facs.sort()
     #for gt_facs in data.facs:
@@ -187,6 +187,7 @@ for data in svm_testing_data:
 #print(sum(au_score)/float(len(au_score)))
 
 #emotion prediction model
+emotions = Models.emotions
 result = []
 for data in svm_testing_data:
     tmp = []
@@ -202,7 +203,7 @@ for data in svm_testing_data:
     emotion_predict = []
     for emotion in emotions:
         emotion_predict.append([emotion.name, emotion.score(facs_predict)])
-    result.append([emotion_predict, data.emotion])
+    result.append([emotion_predict, data.emotion_label])
 
 #save model
 import pickle
@@ -219,7 +220,7 @@ log_path = '/Programing/GR/Code/Python/log/'
 
 ts = int(time.time())
 output = {'n_train': len(training_images), 'n_test': len(testing_images), 
-    'au_score' : au_models_score, 'facs': facs, 'au_accuracy': sum(au_score)/float(len(au_score)),  }
+    'au_models_score' : au_models_score, 'possitive_au_predict_score': sum(possitive_au_predict_score)/float(len(possitive_au_predict_score)),'facs': facs, 'au_accuracy': sum(au_models_score)/float(len(au_models_score)),  }
     
 with open(log_path + 'system_log' + str(ts) + '.txt', "w+") as outfile:
     json.dump(output, outfile,sort_keys=True, indent=4, separators=(',', ': '))
