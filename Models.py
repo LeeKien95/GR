@@ -2,7 +2,22 @@ import menpo.io as mio
 import os
 from sklearn import svm
 import numpy as np
+import pickle
 
+#get au classification models, return a list of models, each member of list classify 1 au in facs list
+def getAuModels():    
+    with open('/Programing/GR/Code/Python/models/au_models.pkl', 'rb') as input:
+        models = pickle.load(input)
+    return models
+
+def getFacsList():
+    with open('/Programing/GR/Code/Python/models/facs.pkl', 'rb') as input:
+        facs = pickle.load(input)
+    return facs
+
+#print(facs)
+#print(len(models))
+    
 
 class ChangeVector:
     def __init__(self, facs = [], landmarkChange = [], emotion_label = 0):
@@ -87,4 +102,5 @@ disgust = Emotion('disgust', [[9,15,16], [10,15,16]], disgus_criteria)
 contempt = Emotion('contempt', [[12,14]], contempt_criteria)
 
 emotions = [happy, sadness, surprise, fear, angry, disgust, contempt]
+
 
