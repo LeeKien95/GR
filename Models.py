@@ -25,13 +25,12 @@ class ChangeVector:
         self.facs = facs
         self.emotion_label = emotion_label
 
-
-class CenterPointLandmark:
-    def __init__(self, facs = [], landmarkChange = [], emotion_label = 0):
-        self.landmarkChange = landmarkChange
+        
+class ImageData:
+    def __init__(self, facs = {}, landmark = [], emotion = 0):
+        self.landmark = landmark
         self.facs = facs
-        self.emotion_label = emotion_label
-
+        self.emotion = emotion
 
 def process_input_image(image, crop_proportion=0.2, max_diagonal=400):
     if image.n_channels == 3:
